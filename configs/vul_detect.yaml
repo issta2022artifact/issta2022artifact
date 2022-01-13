@@ -1,0 +1,60 @@
+data_folder: "data/vul_detect/d2a"
+
+max_token_parts: 32
+num_workers: 8
+pretrained: null
+seed: 7
+encoder:
+  name: "LSTM"
+  embed_dim: 64
+  activation: "relu"
+
+  st_hidden_size: 64
+  st_num_layers: 1
+  st_use_bi_rnn: true
+  st_dropout: 0.5
+
+  flow_hidden_size: 128
+  flow_num_layers: 1
+  flow_use_bi_rnn: true
+  flow_dropout: 0.5
+  pretrained: null
+
+  ast:
+    embed_dim: 64
+    hidden_dim: 64
+   
+    n_head: 3
+    edge_sample_ratio: 0.8
+
+    n_hidden_layers: 3
+    dropout: 0.5
+    pooling_ratio: 0.8
+
+
+n_head: 2
+self_attn_dropout: 0.5
+nlayers: 3
+n_hidden_layers: 3
+n_classes: 2
+
+hyper_parameters:
+  max_n_flow: 100
+
+  n_epochs: 500
+  patience: 30
+  batch_size: 64
+  test_batch_size: 64
+  val_every_step: 1.0
+  log_every_n_steps: 50
+  progress_bar_refresh_rate: 1
+  resume_from_checkpoint: null
+  clip_norm: 30
+
+  optimizer: "SGD"
+  learning_rate: 0.002
+  decay_gamma: 0.95
+  shuffle_data: true
+  
+
+

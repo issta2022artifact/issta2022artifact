@@ -1,0 +1,256 @@
+from pytorch_lightning import LightningDataModule
+from tokenizers import Tokenizer
+from omegaconf import DictConfig
+from os import cpu_count
+from os.path import join
+
+import torch
+from transformers import RobertaTokenizer
+
+from src.datas.samples import ValueFlowPairBatch, ValueFlowPair, SampleBatch, Sample, ValueFlow, ValueFlowBatch
+from src.datas.datasets import ValueFlowPairDataset, SampleDataset, ValueFlowDataset
+from typing import List, Optional, Union
+from torch.utils.data import DataLoader, Dataset
+from torch_geometric.data import DataLoader as DataLoader_geo
+from torch_geometric.data import Batch
+
+
+class ASTDataModule(LightningDataModule):
+    def __init__(self, config: DictConfig, tokenizer: Union[Tokenizer,
+                                                            RobertaTokenizer]):
+        super().__init__()
+        self.__tokenizer = tokenizer
+        self.__config = config
+        self.__data_folder = config.data_folder
+        self.__n_workers = cpu_count(
+        ) if self.__config.num_workers == -1 else self.__config.num_workers
+
+    def __create_dataset(self, data_path: str) -> Dataset:
+        return ValueFlowDataset(data_path, self.__config, self.__tokenizer)
+
+    def train_dataloader(self) -> DataLoader_geo:
+        train_dataset_path = join(self.__data_folder, "train.json")
+        train_dataset = self.__create_dataset(train_dataset_path)
+        return DataLoader_geo(
+            train_dataset,
+            batch_size=self.__config.hyper_parameters.batch_size,
+            shuffle=self.__config.hyper_parameters.shuffle_data,
+            num_workers=self.__n_workers,
+            pin_memory=True,
+        )
+
+    def val_dataloader(self) -> DataLoader_geo:
+        val_dataset_path = join(self.__data_folder, "val.json")
+        val_dataset = self.__create_dataset(val_dataset_path)
+        return DataLoader_geo(
+            val_dataset,
+            batch_size=self.__config.hyper_parameters.batch_size,
+            shuffle=False,
+            num_workers=self.__n_workers,
+            pin_memory=True,
+        )
+
+    def test_dataloader(self) -> DataLoader_geo:
+        test_dataset_path = join(self.__data_folder, "test.json")
+        test_dataset = self.__create_dataset(test_dataset_path)
+        return DataLoader_geo(
+            test_dataset,
+            batch_size=self.__config.hyper_parameters.batch_size,
+            shuffle=False,
+            num_workers=self.__n_workers,
+            pin_memory=True,
+        )
+
+    def transfer_batch_to_device(
+            self,
+            batch: Batch,
+            device: Optional[torch.device] = None) -> Batch:
+        if device is not None:
+            batch.move_to_device(device)
+        return batch
+
+
+class ValueFlowDataModule(LightningDataModule):
+    def __init__(self, config: DictConfig, tokenizer: Union[Tokenizer,
+                                                            RobertaTokenizer]):
+        super().__init__()
+        self.__tokenizer = tokenizer
+        self.__config = config
+        self.__data_folder = config.data_folder
+        self.__n_workers = cpu_count(
+        ) if self.__config.num_workers == -1 else self.__config.num_workers
+
+    @staticmethod
+    def collate_wrapper(batch: List[ValueFlow]) -> ValueFlowBatch:
+        return ValueFlowBatch(batch)
+
+    def __create_dataset(self, data_path: str) -> Dataset:
+        return ValueFlowDataset(data_path, self.__config, self.__tokenizer)
+
+    def train_dataloader(self) -> DataLoader:
+        train_dataset_path = join(self.__data_folder, "train.json")
+        train_dataset = self.__create_dataset(train_dataset_path)
+        return DataLoader(
+            train_dataset,
+            batch_size=self.__config.hyper_parameters.batch_size,
+            shuffle=self.__config.hyper_parameters.shuffle_data,
+            num_workers=self.__n_workers,
+            collate_fn=self.collate_wrapper,
+            pin_memory=True,
+        )
+
+    def val_dataloader(self) -> DataLoader:
+        val_dataset_path = join(self.__data_folder, "val.json")
+        val_dataset = self.__create_dataset(val_dataset_path)
+        return DataLoader(
+            val_dataset,
+            batch_size=self.__config.hyper_parameters.batch_size,
+            shuffle=False,
+            num_workers=self.__n_workers,
+            collate_fn=self.collate_wrapper,
+            pin_memory=True,
+        )
+
+    def test_dataloader(self) -> DataLoader:
+        test_dataset_path = join(self.__data_folder, "test.json")
+        test_dataset = self.__create_dataset(test_dataset_path)
+        return DataLoader(
+            test_dataset,
+            batch_size=self.__config.hyper_parameters.batch_size,
+            shuffle=False,
+            num_workers=self.__n_workers,
+            collate_fn=self.collate_wrapper,
+            pin_memory=True,
+        )
+
+    def transfer_batch_to_device(
+            self,
+            batch: ValueFlowBatch,
+            device: Optional[torch.device] = None) -> ValueFlowBatch:
+        if device is not None:
+            batch.move_to_device(device)
+        return batch
+
+
+class ValueFlowPairDataModule(LightningDataModule):
+    def __init__(self, config: DictConfig, tokenizer: Union[Tokenizer,
+                                                            RobertaTokenizer]):
+        super().__init__()
+        self.__tokenizer = tokenizer
+        self.__config = config
+        self.__data_folder = config.data_folder
+        self.__n_workers = cpu_count(
+        ) if self.__config.num_workers == -1 else self.__config.num_workers
+
+    @staticmethod
+    def collate_wrapper(batch: List[ValueFlowPair]) -> ValueFlowPairBatch:
+        return ValueFlowPairBatch(batch)
+
+    def __create_dataset(self, data_path: str) -> Dataset:
+        return ValueFlowPairDataset(data_path, self.__config, self.__tokenizer)
+
+    def train_dataloader(self) -> DataLoader:
+        train_dataset_path = join(self.__data_folder, "train.json")
+        train_dataset = self.__create_dataset(train_dataset_path)
+        return DataLoader(
+            train_dataset,
+            batch_size=self.__config.hyper_parameters.batch_size,
+            shuffle=self.__config.hyper_parameters.shuffle_data,
+            num_workers=self.__n_workers,
+            collate_fn=self.collate_wrapper,
+            pin_memory=True,
+        )
+
+    def val_dataloader(self) -> DataLoader:
+        val_dataset_path = join(self.__data_folder, "val.json")
+        val_dataset = self.__create_dataset(val_dataset_path)
+        return DataLoader(
+            val_dataset,
+            batch_size=self.__config.hyper_parameters.batch_size,
+            shuffle=False,
+            num_workers=self.__n_workers,
+            collate_fn=self.collate_wrapper,
+            pin_memory=True,
+        )
+
+    def test_dataloader(self) -> DataLoader:
+        test_dataset_path = join(self.__data_folder, "test.json")
+        test_dataset = self.__create_dataset(test_dataset_path)
+        return DataLoader(
+            test_dataset,
+            batch_size=self.__config.hyper_parameters.batch_size,
+            shuffle=False,
+            num_workers=self.__n_workers,
+            collate_fn=self.collate_wrapper,
+            pin_memory=True,
+        )
+
+    def transfer_batch_to_device(
+            self,
+            batch: ValueFlowPairBatch,
+            device: Optional[torch.device] = None) -> ValueFlowPairBatch:
+        if device is not None:
+            batch.move_to_device(device)
+        return batch
+
+
+class SampleDataModule(LightningDataModule):
+    def __init__(self, config: DictConfig, tokenizer: Union[Tokenizer,
+                                                            RobertaTokenizer]):
+        super().__init__()
+        self.__tokenizer = tokenizer
+        self.__config = config
+        self.__data_folder = config.data_folder
+        self.__n_workers = cpu_count(
+        ) if self.__config.num_workers == -1 else self.__config.num_workers
+
+    @staticmethod
+    def collate_wrapper(batch: List[Sample]) -> SampleBatch:
+        return SampleBatch(batch)
+
+    def __create_dataset(self, data_path: str) -> Dataset:
+        return SampleDataset(data_path, self.__config, self.__tokenizer)
+
+    def train_dataloader(self) -> DataLoader:
+        train_dataset_path = join(self.__data_folder, "train.json")
+        train_dataset = self.__create_dataset(train_dataset_path)
+        return DataLoader(
+            train_dataset,
+            batch_size=self.__config.hyper_parameters.batch_size,
+            shuffle=self.__config.hyper_parameters.shuffle_data,
+            num_workers=self.__n_workers,
+            collate_fn=self.collate_wrapper,
+            pin_memory=True,
+        )
+
+    def val_dataloader(self) -> DataLoader:
+        val_dataset_path = join(self.__data_folder, "val.json")
+        val_dataset = self.__create_dataset(val_dataset_path)
+        return DataLoader(
+            val_dataset,
+            batch_size=self.__config.hyper_parameters.batch_size,
+            shuffle=False,
+            num_workers=self.__n_workers,
+            collate_fn=self.collate_wrapper,
+            pin_memory=True,
+        )
+
+    def test_dataloader(self) -> DataLoader:
+        test_dataset_path = join(self.__data_folder, "test.json")
+        test_dataset = self.__create_dataset(test_dataset_path)
+        return DataLoader(
+            test_dataset,
+            batch_size=self.__config.hyper_parameters.batch_size,
+            shuffle=False,
+            num_workers=self.__n_workers,
+            collate_fn=self.collate_wrapper,
+            pin_memory=True,
+        )
+
+    def transfer_batch_to_device(
+            self,
+            batch: SampleBatch,
+            device: Optional[torch.device] = None) -> SampleBatch:
+        if device is not None:
+            batch.move_to_device(device)
+        return batch
